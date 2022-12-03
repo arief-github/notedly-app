@@ -27,7 +27,6 @@ const typeDefs = gql `
 	}
 
 	type Query {
-		hello: String,
 		notes: [Note!]!,
 		note(id: ID!): Note!
 	}
@@ -40,7 +39,6 @@ const typeDefs = gql `
 // provide resolver functions for our schema fields
 const resolvers = {
     Query: {
-        hello: () => 'Hello World!',
         notes: () => async () => {
         	return await models.Note.find();
         },
