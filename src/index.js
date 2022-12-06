@@ -3,6 +3,7 @@ const { ApolloServer } = require('apollo-server-express');
 
 const app = express();
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 
 const db = require('./db');
 const models = require('./models');
@@ -13,6 +14,18 @@ const resolvers = require('./resolvers');
 const port = process.env.PORT || 4000;
 
 const DB_HOST = process.env.DB_HOST;
+
+// get the user info from a jwt
+const getUser = token => {
+    if (token) {
+        try {
+            return jwt.verify(token, process.env.JWT_SECRET);
+        } catch (err) {
+            throw new Error('Session Invalid');
+        }
+    }
+}
+
 
 // let notes = [
 //     { id: '1', content: 'This is a note', author: 'Adam Scott' },
@@ -27,12 +40,15 @@ const DB_HOST = process.env.DB_HOST;
 db.connect(DB_HOST);
 
 // apollo server setup
-const server = new ApolloServer({ 
-	typeDefs, 
-	resolvers,
-	context: () => {
-		return { models };
-	}
+const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    context: ({ req }) => {
+    	const token = req.headers.authorization;
+    	const user = getUser(token);
+    	console.log(user);
+        return { models, user };
+    }
 });
 
 server.applyMiddleware({ app, path: '/api' });
