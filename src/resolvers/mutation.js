@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const {
     AuthenticationError,
     ForbiddenError
@@ -9,27 +10,50 @@ require('dotenv').config();
 const gravatar = require('../utils/gravatar');
 
 module.exports = {
-    newNote: async (parent, args, { models }) => {
+    newNote: async (parent, args, { models, user }) => {
+        if (!user) {
+            throw new AuthenticationError('You must be sign in to create a note');
+        }
+
         return await models.Note.create({
             content: args.content,
-            author: args.author
+            author: mongoose.Types.ObjectId(user.id)
         })
     },
-    deleteNote: async (parent, { id }, { models }) => {
+    deleteNote: async (parent, { id }, { models, user }) => {
+        if (!user) {
+            throw new AuthenticationError('You must be signed in to deleted a note');
+        }
+
+        const note = await models.Note.findById(id);
+
+        if (note && String(note.author) !== user.id) {
+            throw new ForbiddenError("You dont have permissions to delete the note");
+        }
+
         try {
-            await models.Note.findOneAndRemove({ _id: id });
+            await note.remove();
             return true;
         } catch (err) {
             return false;
         }
     },
-    updateNote: async (parent, { content, author, id }, { models }) => {
+    updateNote: async (parent, { content, id }, { models, user }) => {
+        if (!user) {
+            throw new AuthenticationError('You must be signed in to update a note');
+        }
+
+        const note = await models.Note.findById(id);
+
+        if (note && String(note.author) !== user.id) {
+            throw new ForbiddenError("You dont have permissions to update the note");
+        }
+
         return await models.Note.findOneAndUpdate({
             _id: id
         }, {
             $set: {
-                content,
-                author
+                content
             },
         }, {
             new: true
