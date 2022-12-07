@@ -1,11 +1,13 @@
 const express = require('express');
 const { ApolloServer } = require('apollo-server-express');
-
+const cors = require('cors');
 const app = express();
+const depthLimit = require('graphql-depth-limit');
+const { createComplexityLimitRule } = require('graphql-validation-complexity');
+
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
-const cors = require('cors');
 
 const db = require('./db');
 const models = require('./models');
@@ -48,10 +50,10 @@ app.use(cors());
 const server = new ApolloServer({
     typeDefs,
     resolvers,
+    validationRules: [depthLimit(5), createComplexityLimitRule(1000)],
     context: ({ req }) => {
     	const token = req.headers.authorization;
     	const user = getUser(token);
-    	console.log(user);
         return { models, user };
     }
 });
